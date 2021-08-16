@@ -92,6 +92,28 @@ func TestCodeToCharUsingProwords(t *testing.T) {
 	}
 }
 
+// TestgetMorseCharOrProsign tests retrieving single characters and prosigns from a text string
+func TestGetMorseCharOrProsign(t *testing.T) {
+	strings := []struct {
+		input, expectedString string
+		expectedLen           int
+	}{
+		{"A", "A", 1},
+		{"ABC", "A", 1},
+		{"A<SK>BC", "A", 1},
+		{"<SK>BC", "<SK>", 4},
+		{"[SK]BC", "[", 1},
+		{"", "", 0},
+	}
+	for _, tester := range strings {
+		char, lenBytes := getMorseCharOrProsign(tester.input)
+		if tester.expectedString != char || tester.expectedLen != lenBytes {
+			t.Fatalf(`getMorseCharOrProsign(%q) = %q, %v, expected %q, %v`, tester.input, char, lenBytes, tester.expectedString, tester.expectedLen)
+		}
+
+	}
+}
+
 // TestCharToCode calls morse.CharToCode with a character, checking
 // for a valid return value.
 func TestStringToCode(t *testing.T) {
@@ -100,6 +122,8 @@ func TestStringToCode(t *testing.T) {
 		{"A", ".- "},
 		{"HELLO", ".... . .-.. .-.. --- "},
 		{"HELLO WORLD 123", ".... . .-.. .-.. ---   .-- --- .-. .-.. -..   .---- ..--- ...-- "},
+		{"<BT>", "-...- "},
+		{"<SK>", "...-.- "},
 	}
 	for _, tester := range strings {
 		code, err := StringToCode(tester.input)
@@ -113,17 +137,41 @@ func TestStringToCode(t *testing.T) {
 // TestStringToCodeSlice calls morse.StringToCodeWordSlice with sentences, checking
 // for a valid return value.
 func TestStringToCodeSlice(t *testing.T) {
-	strings := []struct{ input string, expected []string }{
-		{"", {""}},
-		{"A", {".- "}},
-		{"HELLO", {".... . .-.. .-.. --- "}},
-		{"HELLO WORLD 123", {".... . .-.. .-.. --- ", ".-- --- .-. .-.. -.. ",".---- ..--- ...-- "}},
+	strings := []struct {
+		input    string
+		expected []string
+	}{
+		{"", []string{""}},
+		{"A", []string{".- "}},
+		{"HELLO", []string{".... . .-.. .-.. --- "}},
+		{"HELLO WORLD 123", []string{".... . .-.. .-.. --- ", ".-- --- .-. .-.. -.. ", ".---- ..--- ...-- "}},
 	}
 	for _, tester := range strings {
 		code, err := StringToCodeWordSlice(tester.input)
-		if tester.expected != code || err != nil {
-			t.Fatalf(`StringToCodeWordSlice(%q) = %q, %v, expected %q, nil`, tester.input, code, err, tester.expected)
+		if err != nil {
+			t.Fatalf(`StringToCodeWordSlice(%q) unexpected error: %v`, tester.input, err)
+		}
+		if len(tester.expected) != len(code) {
+			t.Fatalf(`StringToCodeWordSlice(%q) = %q, wrong length expected %q, actual %q`, tester.input, code, len(tester.expected), len(code))
+		}
+		for i := 0; i < len(code); i++ {
+			if tester.expected[i] != code[i] {
+				t.Fatalf(`StringToCodeWordSlice(%q): return element %q expected %q actual %q`, tester.input, i, tester.expected[i], code[i])
+
+			}
 		}
 
+	}
+}
+
+func TestCodeWordToString(t *testing.T) {
+	expected := "HELLO"
+	inputCode := ".... . .-.. .-.. --- "
+	actual, err := CodeToString(inputCode)
+	if err != nil {
+		t.Fatalf("CodeToString(%q), unexpected error: %q", inputCode, err)
+	}
+	if actual != expected {
+		t.Fatalf("CodeToString(%q), expected: %q, actual: %q", inputCode, expected, actual)
 	}
 }

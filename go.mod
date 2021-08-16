@@ -1,3 +1,3 @@
-module morse
+module martinmurphy.com/morse/morse
 
-go 1.15
+go 1.16

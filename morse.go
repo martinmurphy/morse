@@ -3,6 +3,7 @@ package morse
 import (
 	"errors"
 	"strings"
+	"unicode/utf8"
 )
 
 // CharToCode - convert a character to a morse code representation
@@ -28,13 +29,40 @@ func CodeToChar(code string) (string, error) {
 	return text, nil
 }
 
+func getMorseCharOrProsign(text string) (string, int) {
+	var retString strings.Builder
+	var retBytes int
+	var inProSign bool
+
+	for {
+		runeValue, runeWidth := utf8.DecodeRuneInString(text[retBytes:])
+		if runeValue == utf8.RuneError {
+			break
+		}
+		retBytes += runeWidth
+		morseChar := string(runeValue)
+		retString.WriteString(morseChar)
+		if morseChar == "<" {
+			inProSign = true
+			continue
+		}
+		if inProSign && morseChar != ">" {
+			continue
+		}
+		break
+	}
+	return retString.String(), retBytes
+}
+
 func StringToCode(text string) (string, error) {
 	var retval strings.Builder
-	for _, ch := range text {
-		if ch == ' ' { // space between words
+	for i := 0; i < len(text); {
+		morseChar, charWidth := getMorseCharOrProsign(text[i:])
+		i += charWidth
+		if morseChar == " " { // space between words
 			retval.WriteString("  ")
 		} else {
-			code, err := CharToCode(string(ch))
+			code, err := CharToCode(morseChar)
 			if err != nil {
 				return "", err
 			}
@@ -45,16 +73,30 @@ func StringToCode(text string) (string, error) {
 	return retval.String(), nil
 }
 
+func CodeToString(code string) (text string, err error) {
+	var retval strings.Builder
+	characters := strings.Split(strings.TrimSpace(code), " ")
+	charText := ""
+	for _, ch := range characters {
+		charText, err = CodeToChar(ch)
+		if err != nil {
+			return
+		}
+		retval.WriteString(charText)
+	}
+	return retval.String(), nil
+}
+
 // StringToCodeWordSlice - convert each word of text to marose and return as a slice of strings
 func StringToCodeWordSlice(text string) ([]string, error) {
-	var retval []string = make([]string)
+	var retval []string = make([]string, 0, 10)
 	words := strings.Split(text, " ")
-	for _, word := range text {
+	for _, word := range words {
 		code, err := StringToCode(word)
 		if err != nil {
-			return "", err
+			return make([]string, 0), err
 		}
-		retval.append(code)
+		retval = append(retval, code)
 	}
 	return retval, nil
 }
@@ -108,6 +150,7 @@ var characters = map[string]string{
 	",":    "--..--",
 	"?":    "..--..",
 	"/":    "-..-.",
+	":":    "---...",
 	"<BT>": "-...-",
 	"<AR>": ".-.-.",
 	"<BK>": "-...-.-",
