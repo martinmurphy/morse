@@ -11,9 +11,9 @@ func CharToCode(ch string) (string, error) {
 	if ch == "" {
 		return "", errors.New("empty character")
 	}
-	morse, known := characters[ch]
+	morse, known := characters[strings.ToUpper(ch)]
 	if !known {
-		return "", errors.New("unknown character")
+		return "", errors.New("unknown character" + ch)
 	}
 	return morse, nil
 }
